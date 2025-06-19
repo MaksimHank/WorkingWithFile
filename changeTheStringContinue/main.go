@@ -1,8 +1,20 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 func main() {
-	s := "Hello, its my page: http://localhost123.com http://123; http://bdfb, http://greb http://tttre See you"
-	fmt.Println(changeTheStringToAsterisks(s))
+	inputFile := os.Args[1]
+	outputFile := os.Args[2]
+
+	producer := NewFileProducer(inputFile)
+	presenter := NewFilePresenter(outputFile)
+
+	service := NewService(producer, presenter)
+
+	if err := service.Run(); err != nil {
+		fmt.Println("Error", err)
+	}
 }

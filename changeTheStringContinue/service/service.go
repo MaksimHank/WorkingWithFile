@@ -1,4 +1,10 @@
-package main
+package service
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+)
 
 type Service struct {
 	prod Producer
@@ -12,20 +18,59 @@ func NewService(prod Producer, pres Presenter) *Service {
 	}
 }
 
-type FilePath struct {
-	inputPath  string
-	outputPath string
+func (s *Service) Run() error {
+	data, err := s.prod.Produce()
+	if err != nil {
+		return err
+	}
+
+	return s.pres.Present(data)
 }
 
-func (fp *FilePath) Producer() ([]string, error) {
-
+type FileProducer struct {
+	inputFile string
 }
 
-func (fp *FilePath) Presenter(path []string) error {
-
+type FilePresenter struct {
+	outputFile string
 }
 
-func changeTheStringToAsterisks(text string) string {
+func NewFileProducer(inputFile string) *FileProducer {
+	return &FileProducer{inputFile: inputFile}
+}
+
+func NewFilePresenter(outputFile string) *FilePresenter {
+	return &FilePresenter{outputFile: outputFile}
+}
+
+func (fp *FileProducer) Produce() ([]string, error) {
+	file, err := os.Open("inputFile")
+	if err != nil {
+		return nil, err
+	}
+
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	data := scanner.Text()
+	sliceStr := make([]string, 0, len(data))
+	for scanner.Scan() {
+		sliceStr = append(sliceStr, data)
+	}
+	if er := scanner.Err(); er != nil {
+		fmt.Println("Error reading file", er)
+		return nil, er
+	}
+
+	return changeTheStringToAsterisks(sliceStr), err
+}
+
+func (fp *FilePresenter) Present(path []string) error {
+
+	return nil
+}
+
+func (s *Service) changeTheStringToAsterisks(text string) string {
 	str := []byte(text)
 	prefix := []byte("http://")
 	prefixlen := len(prefix)
