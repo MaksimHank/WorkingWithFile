@@ -28,7 +28,9 @@ func (s *Service) Run() error {
 }
 
 type FileProducer struct {
-	inputFile string
+	service     *Service
+	inputFile   string
+	cachedLines []string
 }
 
 type FilePresenter struct {
@@ -44,7 +46,7 @@ func NewFilePresenter(outputFile string) *FilePresenter {
 }
 
 func (fp *FileProducer) Produce() ([]string, error) {
-	file, err := os.Open("inputFile")
+	file, err := os.Open(fp.inputFile)
 	if err != nil {
 		return nil, err
 	}
@@ -52,22 +54,38 @@ func (fp *FileProducer) Produce() ([]string, error) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	data := scanner.Text()
-	sliceStr := make([]string, 0, len(data))
+
 	for scanner.Scan() {
-		sliceStr = append(sliceStr, data)
+		data := scanner.Text()
+		res := fp.service.changeTheStringToAsterisks(data)
+		fp.cachedLines = append(fp.cachedLines, res)
 	}
 	if er := scanner.Err(); er != nil {
 		fmt.Println("Error reading file", er)
 		return nil, er
 	}
 
-	return changeTheStringToAsterisks(sliceStr), err
+	return fp.cachedLines, err
 }
 
-func (fp *FilePresenter) Present(path []string) error {
+func (fp *FilePresenter) Present(data []string) error {
+	file, err := os.Create(fp.outputFile)
+	if err != nil {
+		fmt.Println("Error creating file!")
+		return err
+	}
+	defer file.Close()
 
-	return nil
+	writer := bufio.NewWriter(file)
+	for _, line := range data {
+		_, err := writer.WriteString(line + "\n")
+		if err != nil {
+			fmt.Println("Error writing file!")
+			return err
+		}
+	}
+
+	return writer.Flush()
 }
 
 func (s *Service) changeTheStringToAsterisks(text string) string {
