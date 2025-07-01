@@ -4,72 +4,242 @@ import (
 	"errors"
 	"github.com/MaksimHank/WorkingWithFile/mocks"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/require"
+	"os"
 	"testing"
 )
 
-type UnitTestSuite struct {
-	suite.Suite
-	mockProducer  *mocks.Producer
-	mockPresenter *mocks.Presenter
-	service       *Service
+func TestService_changeTheStringToAsterisks(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "one link",
+			input: "Hello, it's my website http://example.com",
+			want:  "Hello, it's my website http://***********",
+		},
+		{
+			name:  "multiple links",
+			input: "Hello, it's my website http://example.com; And this too http://test.com; http://123",
+			want:  "Hello, it's my website http://***********; And this too http://********; http://***",
+		},
+		{
+			name:  "without links",
+			input: "Just regular text",
+			want:  "Just regular text",
+		},
+		{
+			name:  "link with path",
+			input: "Check http://domain.com/path?query=value",
+			want:  "Check http://***************************",
+		},
+		{
+			name:  "link at start",
+			input: "http://start.com is first",
+			want:  "http://********* is first",
+		},
+		{
+			name:  "email should be ignored",
+			input: "Contact email@domain.com",
+			want:  "Contact email@domain.com",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Service{}
+			if got := s.changeTheStringToAsterisks(tt.input); got != tt.want {
+				t.Errorf("changeTheStringToAsterisks() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
-func (uts *UnitTestSuite) SetupTest() {
-	uts.mockProducer = new(mocks.Producer)
-	uts.mockPresenter = new(mocks.Presenter)
-	uts.service = NewService(uts.mockProducer, uts.mockPresenter)
+func TestService_Run(t *testing.T) {
+	type fields struct {
+		prod *mocks.Producer
+		pres *mocks.Presenter
+	}
+	tests := []struct {
+		name       string
+		setupMocks func(prod *mocks.Producer, pres *mocks.Presenter)
+		wantErr    bool
+	}{
+		{
+			name: "success",
+			setupMocks: func(prod *mocks.Producer, pres *mocks.Presenter) {
+				prod.On("Produce").Return([]string{"Hello, it's my website http://***********"}, nil)
+				pres.On("Present", []string{"Hello, it's my website http://***********"}).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Produce Error",
+			setupMocks: func(prod *mocks.Producer, pres *mocks.Presenter) {
+				prod.On("Produce").Return(nil, errors.New("produce failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "Present error",
+			setupMocks: func(prod *mocks.Producer, pres *mocks.Presenter) {
+				prod.On("Produce").Return([]string{"Hello, it's my website http://***********"}, nil)
+				pres.On("Present", []string{"Hello, it's my website http://***********"}).
+					Return(errors.New("present failed"))
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prodMock := new(mocks.Producer)
+			presMock := new(mocks.Presenter)
+			tt.setupMocks(prodMock, presMock)
+			s := &Service{
+				prod: prodMock,
+				pres: presMock,
+			}
+			if err := s.Run(); (err != nil) != tt.wantErr {
+				t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			prodMock.AssertExpectations(t)
+			presMock.AssertExpectations(t)
+		})
+	}
 }
 
-func TestServiceSuite(t *testing.T) {
-	suite.Run(t, new(UnitTestSuite))
+func TestFileProducer_Produce(t *testing.T) {
+	createTempFile := func(content string) string {
+		tmpFile, err := os.CreateTemp("", "testfile")
+		require.NoError(t, err)
+		_, err = tmpFile.WriteString(content)
+		require.NoError(t, err)
+		tmpFile.Close()
+		return tmpFile.Name()
+	}
+
+	mockService := &Service{}
+
+	tests := []struct {
+		name        string
+		inputFile   string
+		fileContent string
+		want        []string
+		wantErr     string
+	}{
+		{
+			name:      "Empty path",
+			inputFile: "",
+			want:      nil,
+			wantErr:   "input file path cannot be empty",
+		},
+		{
+			name:        "Successful processing",
+			inputFile:   createTempFile("Hello http://example.com"),
+			fileContent: "Hello http://example.com",
+			want:        []string{"Hello http://***********"},
+		},
+		{
+			name:        "Multiple lines",
+			inputFile:   createTempFile("Line1\nLine2 http://test.com"),
+			fileContent: "Line1\nLine2 http://test.com",
+			want:        []string{"Line1", "Line2 http://********"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fp := &FileProducer{
+				inputFile: tt.inputFile,
+				service:   mockService,
+			}
+			got, err := fp.Produce()
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
 
-func (uts *UnitTestSuite) TestNewServiceSuit() {
-	assert.NotNil(uts.T(), uts.service)
-	assert.Equal(uts.T(), uts.mockProducer, uts.service.prod)
-	assert.Equal(uts.T(), uts.mockPresenter, uts.service.pres)
-}
+func TestFilePresenter_Present(t *testing.T) {
+	readFile := func(path string) string {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return ""
+		}
+		return string(data)
+	}
 
-func (uts *UnitTestSuite) TestRunSuccess() {
-	masked := []string{"Hello, it's my website http://***********;", "And this too http://********"}
+	tests := []struct {
+		name        string
+		outputFile  string
+		data        []string
+		wantContent string
+		wantErr     bool
+	}{
+		{
+			name:        "Successful write",
+			outputFile:  "",
+			data:        []string{"Hello, it's my website http://***********;", "And this too http://********"},
+			wantContent: "Hello, it's my website http://***********;\nAnd this too http://********\n",
+			wantErr:     false,
+		},
+		{
+			name:       "Write to invalid path",
+			outputFile: "/invalid_directory/output.txt",
+			data:       []string{"Hello, it's my website http://***********"},
+			wantErr:    true,
+		},
+		{
+			name:        "Empty data",
+			outputFile:  "",
+			data:        []string{},
+			wantContent: "",
+			wantErr:     false,
+		},
+		{
+			name:        "Special characters",
+			outputFile:  "",
+			data:        []string{"line with \n newline", "Contact email@domain.com"},
+			wantContent: "line with \n newline\nContact email@domain.com\n",
+			wantErr:     false,
+		},
+	}
 
-	uts.mockProducer.On("Produce").Return(masked, nil)
-	uts.mockPresenter.On("Present", masked).Return(nil)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			outputPath := tt.outputFile
+			if outputPath == "" && !tt.wantErr {
+				tmpFile, err := os.CreateTemp("", "test_output")
+				require.NoError(t, err)
+				tmpFile.Close()
+				outputPath = tmpFile.Name()
+				defer os.Remove(outputPath)
+			}
 
-	err := uts.service.Run()
+			fp := &FilePresenter{
+				outputFile: outputPath,
+			}
 
-	assert.NoError(uts.T(), err)
-	uts.mockProducer.AssertExpectations(uts.T())
-	uts.mockPresenter.AssertExpectations(uts.T())
-}
+			err := fp.Present(tt.data)
 
-func (uts *UnitTestSuite) TestRunProducerError() {
-	uts.mockProducer.On("Produce").Return([]string{}, errors.New("fail on producer"))
-	err := uts.service.Run()
-	assert.Error(uts.T(), err)
-	uts.mockPresenter.AssertNotCalled(uts.T(), "Present", mock.Anything)
-}
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
 
-func (uts *UnitTestSuite) TestRunPresenterError() {
-	masked := []string{"Hello, it's my website http://***********;", "And this too http://********"}
-
-	uts.mockProducer.On("Produce").Return(masked, nil)
-	uts.mockPresenter.On("Present", masked).Return(errors.New("fail on presenter"))
-
-	err := uts.service.Run()
-	assert.Error(uts.T(), err)
-}
-
-func (uts *UnitTestSuite) TestChangeTheStringToAsterisks() {
-	input := "Hello, it's my website http://example.com; And this too http://test.com"
-	expected := "Hello, it's my website http://***********; And this too http://********"
-	result := uts.service.changeTheStringToAsterisks(input)
-	assert.Equal(uts.T(), expected, result)
-
-	input2 := "No url here"
-	expected2 := "No url here"
-	result2 := uts.service.changeTheStringToAsterisks(input2)
-	assert.Equal(uts.T(), expected2, result2)
+			if tt.wantContent != "" {
+				content := readFile(outputPath)
+				assert.Equal(t, tt.wantContent, content)
+			}
+		})
+	}
 }

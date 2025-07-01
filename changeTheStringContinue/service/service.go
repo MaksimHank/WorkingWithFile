@@ -2,6 +2,7 @@ package service
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 )
@@ -46,6 +47,9 @@ func NewFilePresenter(outputFile string) *FilePresenter {
 }
 
 func (fp *FileProducer) Produce() ([]string, error) {
+	if fp.inputFile == "" {
+		return nil, errors.New("input file path cannot be empty")
+	}
 	file, err := os.Open(fp.inputFile)
 	if err != nil {
 		return nil, err
@@ -80,7 +84,7 @@ func (fp *FilePresenter) Present(data []string) error {
 	for _, line := range data {
 		_, err := writer.WriteString(line + "\n")
 		if err != nil {
-			fmt.Println("Error writing file!")
+			fmt.Println("Error writing data to file!")
 			return err
 		}
 	}
