@@ -24,14 +24,18 @@ func (s *Service) Run() error {
 	if err != nil {
 		return err
 	}
+	var masked []string
+	for _, str := range data {
+		str = s.changeTheStringToAsterisks(str)
+		masked = append(masked, str)
+	}
 
-	return s.pres.Present(data)
+	return s.pres.Present(masked)
 }
 
 type FileProducer struct {
-	service     *Service
-	inputFile   string
-	cachedLines []string
+	inputFile string
+	res       []string
 }
 
 type FilePresenter struct {
@@ -61,15 +65,14 @@ func (fp *FileProducer) Produce() ([]string, error) {
 
 	for scanner.Scan() {
 		data := scanner.Text()
-		res := fp.service.changeTheStringToAsterisks(data)
-		fp.cachedLines = append(fp.cachedLines, res)
+		fp.res = append(fp.res, data)
 	}
 	if er := scanner.Err(); er != nil {
 		fmt.Println("Error reading file", er)
 		return nil, er
 	}
 
-	return fp.cachedLines, err
+	return fp.res, err
 }
 
 func (fp *FilePresenter) Present(data []string) error {

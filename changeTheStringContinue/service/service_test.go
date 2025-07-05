@@ -57,10 +57,6 @@ func TestService_changeTheStringToAsterisks(t *testing.T) {
 }
 
 func TestService_Run(t *testing.T) {
-	type fields struct {
-		prod *mocks.Producer
-		pres *mocks.Presenter
-	}
 	tests := []struct {
 		name       string
 		setupMocks func(prod *mocks.Producer, pres *mocks.Presenter)
@@ -121,8 +117,6 @@ func TestFileProducer_Produce(t *testing.T) {
 		return tmpFile.Name()
 	}
 
-	mockService := &Service{}
-
 	tests := []struct {
 		name        string
 		inputFile   string
@@ -140,20 +134,19 @@ func TestFileProducer_Produce(t *testing.T) {
 			name:        "Successful processing",
 			inputFile:   createTempFile("Hello http://example.com"),
 			fileContent: "Hello http://example.com",
-			want:        []string{"Hello http://***********"},
+			want:        []string{"Hello http://example.com"},
 		},
 		{
 			name:        "Multiple lines",
 			inputFile:   createTempFile("Line1\nLine2 http://test.com"),
 			fileContent: "Line1\nLine2 http://test.com",
-			want:        []string{"Line1", "Line2 http://********"},
+			want:        []string{"Line1", "Line2 http://test.com"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fp := &FileProducer{
 				inputFile: tt.inputFile,
-				service:   mockService,
 			}
 			got, err := fp.Produce()
 			if tt.wantErr != "" {
