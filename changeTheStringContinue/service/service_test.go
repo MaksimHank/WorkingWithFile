@@ -65,7 +65,7 @@ func TestService_Run(t *testing.T) {
 		{
 			name: "success",
 			setupMocks: func(prod *mocks.Producer, pres *mocks.Presenter) {
-				prod.On("Produce").Return([]string{"Hello, it's my website http://***********"}, nil)
+				prod.On("Produce").Return([]string{"Hello, it's my website http://example.com"}, nil)
 				pres.On("Present", []string{"Hello, it's my website http://***********"}).
 					Return(nil)
 			},
@@ -124,12 +124,6 @@ func TestFileProducer_Produce(t *testing.T) {
 		want        []string
 		wantErr     string
 	}{
-		{
-			name:      "Empty path",
-			inputFile: "",
-			want:      nil,
-			wantErr:   "input file path cannot be empty",
-		},
 		{
 			name:        "Successful processing",
 			inputFile:   createTempFile("Hello http://example.com"),

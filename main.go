@@ -11,13 +11,13 @@ func main() {
 	var inputFile string
 	var outputFile string
 
-	if len(os.Args) > 1 {
-		inputFile = os.Args[1]
-	} else {
-		fmt.Println("Error. Didn't find inputfile")
+	if len(os.Args) < 2 {
+		fmt.Println("go run main.go inputfile.txt(required) outputfile.txt(optional)")
+		return
 	}
+	inputFile = os.Args[1]
 
-	if len(os.Args) > 2 {
+	if len(os.Args) == 3 {
 		outputFile = os.Args[2]
 	} else {
 		outputFile = "output_default.txt"

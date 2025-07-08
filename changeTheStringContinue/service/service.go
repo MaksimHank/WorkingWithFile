@@ -2,7 +2,6 @@ package service
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
 )
@@ -35,7 +34,6 @@ func (s *Service) Run() error {
 
 type FileProducer struct {
 	inputFile string
-	res       []string
 }
 
 type FilePresenter struct {
@@ -51,9 +49,6 @@ func NewFilePresenter(outputFile string) *FilePresenter {
 }
 
 func (fp *FileProducer) Produce() ([]string, error) {
-	if fp.inputFile == "" {
-		return nil, errors.New("input file path cannot be empty")
-	}
 	file, err := os.Open(fp.inputFile)
 	if err != nil {
 		return nil, err
@@ -63,16 +58,17 @@ func (fp *FileProducer) Produce() ([]string, error) {
 
 	scanner := bufio.NewScanner(file)
 
+	var res []string
 	for scanner.Scan() {
 		data := scanner.Text()
-		fp.res = append(fp.res, data)
+		res = append(res, data)
 	}
-	if er := scanner.Err(); er != nil {
-		fmt.Println("Error reading file", er)
-		return nil, er
+	if err = scanner.Err(); err != nil {
+		fmt.Println("Error reading file", err)
+		return nil, err
 	}
 
-	return fp.res, err
+	return res, nil
 }
 
 func (fp *FilePresenter) Present(data []string) error {
