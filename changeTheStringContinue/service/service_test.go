@@ -2,6 +2,8 @@ package service
 
 import (
 	"errors"
+	pres "github.com/MaksimHank/WorkingWithFile/changeTheStringContinue/presenter"
+	prod "github.com/MaksimHank/WorkingWithFile/changeTheStringContinue/producer"
 	"github.com/MaksimHank/WorkingWithFile/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -139,8 +141,8 @@ func TestFileProducer_Produce(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fp := &FileProducer{
-				inputFile: tt.inputFile,
+			fp := &prod.FileProducer{
+				InputFile: tt.inputFile,
 			}
 			got, err := fp.Produce()
 			if tt.wantErr != "" {
@@ -211,8 +213,8 @@ func TestFilePresenter_Present(t *testing.T) {
 				defer os.Remove(outputPath)
 			}
 
-			fp := &FilePresenter{
-				outputFile: outputPath,
+			fp := &pres.FilePresenter{
+				OutputFile: outputPath,
 			}
 
 			err := fp.Present(tt.data)

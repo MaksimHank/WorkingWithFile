@@ -7,15 +7,15 @@ import (
 )
 
 type FilePresenter struct {
-	outputFile string
+	OutputFile string
 }
 
 func NewFilePresenter(outputFile string) *FilePresenter {
-	return &FilePresenter{outputFile: outputFile}
+	return &FilePresenter{OutputFile: outputFile}
 }
 
 func (fp *FilePresenter) Present(data []string) error {
-	file, err := os.Create(fp.outputFile)
+	file, err := os.Create(fp.OutputFile)
 	if err != nil {
 		fmt.Println("Error creating file!")
 		return err

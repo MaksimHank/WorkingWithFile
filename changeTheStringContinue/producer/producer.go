@@ -7,15 +7,15 @@ import (
 )
 
 type FileProducer struct {
-	inputFile string
+	InputFile string
 }
 
 func NewFileProducer(inputFile string) *FileProducer {
-	return &FileProducer{inputFile: inputFile}
+	return &FileProducer{InputFile: inputFile}
 }
 
 func (fp *FileProducer) Produce() ([]string, error) {
-	file, err := os.Open(fp.inputFile)
+	file, err := os.Open(fp.InputFile)
 	if err != nil {
 		return nil, err
 	}

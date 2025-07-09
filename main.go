@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	pres "github.com/MaksimHank/WorkingWithFile/changeTheStringContinue/presenter"
+	prod "github.com/MaksimHank/WorkingWithFile/changeTheStringContinue/producer"
 	sr "github.com/MaksimHank/WorkingWithFile/changeTheStringContinue/service"
 )
 
@@ -23,8 +25,8 @@ func main() {
 		outputFile = "output_default.txt"
 	}
 
-	producer := sr.NewFileProducer(inputFile)
-	presenter := sr.NewFilePresenter(outputFile)
+	producer := prod.NewFileProducer(inputFile)
+	presenter := pres.NewFilePresenter(outputFile)
 
 	service := sr.NewService(producer, presenter)
 
