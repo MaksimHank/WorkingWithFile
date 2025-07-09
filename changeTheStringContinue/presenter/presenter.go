@@ -1,0 +1,35 @@
+package presenter
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+)
+
+type FilePresenter struct {
+	outputFile string
+}
+
+func NewFilePresenter(outputFile string) *FilePresenter {
+	return &FilePresenter{outputFile: outputFile}
+}
+
+func (fp *FilePresenter) Present(data []string) error {
+	file, err := os.Create(fp.outputFile)
+	if err != nil {
+		fmt.Println("Error creating file!")
+		return err
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	for _, line := range data {
+		_, err := writer.WriteString(line + "\n")
+		if err != nil {
+			fmt.Println("Error writing data to file!")
+			return err
+		}
+	}
+
+	return writer.Flush()
+}

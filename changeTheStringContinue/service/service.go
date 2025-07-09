@@ -1,10 +1,12 @@
 package service
 
-import (
-	"bufio"
-	"fmt"
-	"os"
-)
+type Producer interface {
+	Produce() ([]string, error)
+}
+
+type Presenter interface {
+	Present(path []string) error
+}
 
 type Service struct {
 	prod Producer
@@ -30,65 +32,6 @@ func (s *Service) Run() error {
 	}
 
 	return s.pres.Present(masked)
-}
-
-type FileProducer struct {
-	inputFile string
-}
-
-type FilePresenter struct {
-	outputFile string
-}
-
-func NewFileProducer(inputFile string) *FileProducer {
-	return &FileProducer{inputFile: inputFile}
-}
-
-func NewFilePresenter(outputFile string) *FilePresenter {
-	return &FilePresenter{outputFile: outputFile}
-}
-
-func (fp *FileProducer) Produce() ([]string, error) {
-	file, err := os.Open(fp.inputFile)
-	if err != nil {
-		return nil, err
-	}
-
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-
-	var res []string
-	for scanner.Scan() {
-		data := scanner.Text()
-		res = append(res, data)
-	}
-	if err = scanner.Err(); err != nil {
-		fmt.Println("Error reading file", err)
-		return nil, err
-	}
-
-	return res, nil
-}
-
-func (fp *FilePresenter) Present(data []string) error {
-	file, err := os.Create(fp.outputFile)
-	if err != nil {
-		fmt.Println("Error creating file!")
-		return err
-	}
-	defer file.Close()
-
-	writer := bufio.NewWriter(file)
-	for _, line := range data {
-		_, err := writer.WriteString(line + "\n")
-		if err != nil {
-			fmt.Println("Error writing data to file!")
-			return err
-		}
-	}
-
-	return writer.Flush()
 }
 
 func (s *Service) changeTheStringToAsterisks(text string) string {
