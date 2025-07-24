@@ -1,5 +1,7 @@
 package service
 
+import "sync"
+
 type Producer interface {
 	Produce() ([]string, error)
 }
@@ -25,10 +27,38 @@ func (s *Service) Run() error {
 	if err != nil {
 		return err
 	}
-	var masked []string
-	for _, str := range data {
-		str = s.changeTheStringToAsterisks(str)
-		masked = append(masked, str)
+	var (
+		masked []string
+		wg     sync.WaitGroup
+	)
+	dataChan := make(chan string)
+	results := make(chan string)
+
+	go func() {
+		for _, str := range data {
+			dataChan <- str
+		}
+		close(dataChan)
+	}()
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for str := range dataChan {
+				str = s.changeTheStringToAsterisks(str)
+				results <- str
+			}
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for res := range results {
+		masked = append(masked, res)
 	}
 
 	return s.pres.Present(masked)
