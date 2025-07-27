@@ -15,6 +15,16 @@ type Service struct {
 	pres Presenter
 }
 
+type job struct {
+	index int
+	text  string
+}
+
+type result struct {
+	index int
+	value string
+}
+
 func NewService(prod Producer, pres Presenter) *Service {
 	return &Service{
 		prod: prod,
@@ -27,16 +37,16 @@ func (s *Service) Run() error {
 	if err != nil {
 		return err
 	}
-	var (
-		masked []string
-		wg     sync.WaitGroup
-	)
-	dataChan := make(chan string)
-	results := make(chan string)
+
+	masked := make([]string, len(data))
+	var wg sync.WaitGroup
+
+	dataChan := make(chan job, len(data))
+	results := make(chan result, len(data))
 
 	go func() {
-		for _, str := range data {
-			dataChan <- str
+		for i, str := range data {
+			dataChan <- job{index: i, text: str}
 		}
 		close(dataChan)
 	}()
@@ -46,8 +56,8 @@ func (s *Service) Run() error {
 		go func() {
 			defer wg.Done()
 			for str := range dataChan {
-				str = s.changeTheStringToAsterisks(str)
-				results <- str
+				maskedStr := s.changeTheStringToAsterisks(str.text)
+				results <- result{index: str.index, value: maskedStr}
 			}
 		}()
 	}
@@ -58,7 +68,7 @@ func (s *Service) Run() error {
 	}()
 
 	for res := range results {
-		masked = append(masked, res)
+		masked[res.index] = res.value
 	}
 
 	return s.pres.Present(masked)
