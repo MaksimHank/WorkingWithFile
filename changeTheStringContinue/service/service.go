@@ -64,7 +64,7 @@ func (s *Service) Run() error {
 
 	go func() {
 		wg.Wait()
-		close(results) ///
+		close(results)
 	}()
 
 	for res := range results {
