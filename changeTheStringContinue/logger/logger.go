@@ -10,6 +10,10 @@ var (
 	level string = "info"
 )
 
+func SetLevel(l string) {
+	l = level
+}
+
 func Init() {
 	lvl := getSlogLevel(level)
 	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
